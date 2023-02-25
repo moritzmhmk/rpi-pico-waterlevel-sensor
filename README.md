@@ -13,3 +13,13 @@ Install stubs:
 $ pip install micropython-rp2-stubs
 ```
 
+## Install dependencies on device
+
+Install mpremote
+```bash
+$ pip install mpremote
+```
+
+```bash
+$ mpremote connect port:/dev/tty.usbmodem14101 mip install umqtt.simple
+```
