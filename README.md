@@ -22,4 +22,5 @@ $ pip install mpremote
 
 ```bash
 $ mpremote connect port:/dev/tty.usbmodem14101 mip install umqtt.simple
+$ mpremote connect port:/dev/tty.usbmodem14101 mip install github:robert-hh/BME280/bme280_float.py
 ```

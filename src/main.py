@@ -1,7 +1,12 @@
-from machine import UART, Pin
+from machine import UART, I2C, Pin, RTC
 import time
+import struct
 import network
+import socket
+import json
+
 from umqtt.simple import MQTTClient
+import bme280_float as bme280
 
 import env
 
@@ -27,6 +32,30 @@ def connect_to_network(nic: network.WLAN, ssid: str, password: str):
             print(" bad authentication!")
 
         raise RuntimeError('Network connection failed.')
+
+
+def set_time_from_ntp(host: str = "pool.ntp.org"):
+    NTP_DELTA = 2208988800
+    NTP_QUERY = bytearray(48)
+    NTP_QUERY[0] = 0x1B
+    addr = socket.getaddrinfo(host, 123)[0][-1]
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.settimeout(1)
+        s.sendto(NTP_QUERY, addr)
+        msg = s.recv(48)
+    finally:
+        s.close()
+    val = struct.unpack("!I", msg[40:44])[0]
+    t = val - NTP_DELTA
+    tm = time.gmtime(t)
+    RTC().datetime(
+        (tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+
+
+def time_to_iso(t: time.struct_time):
+    Y, m, d, H, M, S, *_ = t
+    return f"{Y}-{m:02}-{d:02}T{H:02}:{M:02}:{S:02}Z"
 
 
 def us100_read_distance(uart: UART) -> float | None:
@@ -63,18 +92,36 @@ if __name__ == "__main__":
     led_pin = Pin("LED", mode=Pin.OUT, value=1)
     done_pin = Pin(15, mode=Pin.OUT, value=0)
     uart1 = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9))
+    i2c = I2C(1, sda=Pin(6), scl=Pin(7))
+    bme = bme280.BME280(i2c=i2c)
+
+    temperature, pressure, humidity = bme.read_compensated_data()
 
     us100_read_distance(uart1)  # discard first measurement
     distance = us100_read_distance(uart1)
 
     wlan = network.WLAN(network.STA_IF)
     connect_to_network(wlan, env.WLAN_SSID, env.WLAN_PASSWORD)
+
+    set_time_from_ntp()
+    timestamp = time_to_iso(time.gmtime())
+
+    # MQTT
     client = MQTTClient(env.MQTT_CLIENT_ID, env.MQTT_SERVER, keepalive=3600)
     client.connect()
     print(
         f"Connected to mqtt on \"{env.MQTT_SERVER}\" as \"{env.MQTT_CLIENT_ID}\"."
     )
-    client.publish(f"{env.MQTT_BASE_TOPIC}/distance", f"{distance}")
+    payload = {
+        'distance': distance,
+        'temperature': temperature,
+        'humidity': humidity,
+        'pressure': pressure,
+        'timestamp': timestamp
+    }
+    topic = f"{env.MQTT_BASE_TOPIC}/sensor_01"
+    client.publish(topic, json.dumps(payload))
+    print(f"Published payload \"{payload}\" in topic \"{topic}\".")
     client.disconnect()
     print("Disconnected from mqtt server.")
 
@@ -83,9 +130,13 @@ if __name__ == "__main__":
     # Signal TPL5110 to shutdown power
     toggle(done_pin, 5, 0.5)
 
-    # Everything below this line will only execute when TPL5110 is not in use - e.g. while debugging
+    # Everything below this line will only execute
+    # when TPL5110 is not in use - e.g. while debugging
     print("Starting debug loop.")
     while True:
         toggle(led_pin, 3, 0.05)
-        print(f"{us100_read_distance(uart1)} cm\t{us100_read_temperature(uart1)}°C")
+        d = us100_read_distance(uart1)
+        t = us100_read_temperature(uart1)
+        print(f"{d} cm\t{t}°C")
+        print(bme.values)
         time.sleep(0.5)
