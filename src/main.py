@@ -80,63 +80,55 @@ def us100_read_temperature(uart: UART) -> int | None:
     return None
 
 
-def toggle(pin: Pin, times: int, delay: float):
-    for _ in range(times):
-        pin.off()
-        time.sleep(delay)
-        pin.on()
-        time.sleep(delay)
-
-
 if __name__ == "__main__":
     led_pin = Pin("LED", mode=Pin.OUT, value=1)
     done_pin = Pin(15, mode=Pin.OUT, value=0)
-    uart1 = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9))
-    i2c = I2C(1, sda=Pin(6), scl=Pin(7))
-    bme = bme280.BME280(i2c=i2c)
+    try:
+        uart1 = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9))
+        i2c = I2C(1, sda=Pin(6), scl=Pin(7))
+        bme = bme280.BME280(i2c=i2c)
 
-    temperature, pressure, humidity = bme.read_compensated_data()
+        temperature, pressure, humidity = bme.read_compensated_data()
 
-    us100_read_distance(uart1)  # discard first measurement
-    distance = us100_read_distance(uart1)
+        us100_read_distance(uart1)  # discard first measurement
+        distance = us100_read_distance(uart1)
 
-    wlan = network.WLAN(network.STA_IF)
-    connect_to_network(wlan, env.WLAN_SSID, env.WLAN_PASSWORD)
+        wlan = network.WLAN(network.STA_IF)
+        connect_to_network(wlan, env.WLAN_SSID, env.WLAN_PASSWORD)
 
-    set_time_from_ntp()
-    timestamp = time_to_iso(time.gmtime())
+        set_time_from_ntp()
+        timestamp = time_to_iso(time.gmtime())
 
-    # MQTT
-    client = MQTTClient(env.MQTT_CLIENT_ID, env.MQTT_SERVER, keepalive=3600)
-    client.connect()
-    print(
-        f"Connected to mqtt on \"{env.MQTT_SERVER}\" as \"{env.MQTT_CLIENT_ID}\"."
-    )
-    payload = {
-        'distance': distance,
-        'temperature': temperature,
-        'humidity': humidity,
-        'pressure': pressure,
-        'timestamp': timestamp
-    }
-    topic = f"{env.MQTT_BASE_TOPIC}/sensor_01"
-    client.publish(topic, json.dumps(payload))
-    print(f"Published payload \"{payload}\" in topic \"{topic}\".")
-    client.disconnect()
-    print("Disconnected from mqtt server.")
+        # MQTT
+        client = MQTTClient(env.MQTT_CLIENT_ID,
+                            env.MQTT_SERVER, keepalive=3600)
+        client.connect()
+        print(
+            f"Connected to mqtt on \"{env.MQTT_SERVER}\" as \"{env.MQTT_CLIENT_ID}\"."
+        )
+        payload = {
+            'distance': distance,
+            'temperature': temperature,
+            'humidity': humidity,
+            'pressure': pressure,
+            'timestamp': timestamp
+        }
+        topic = f"{env.MQTT_BASE_TOPIC}/sensor_01"
+        client.publish(topic, json.dumps(payload), retain=True)
+        print(f"Published payload \"{payload}\" in topic \"{topic}\".")
+        client.disconnect()
+        print("Disconnected from mqtt server.")
+    except Exception as e:
+        print(f"Esception {e} occured.")
+        print(e)
+    finally:
+        # Blink LED
+        for _ in range(5*2):
+            led_pin.toggle()
+            time.sleep(0.1)
 
-    # Blink LED
-    toggle(led_pin, 5, 0.1)
-    # Signal TPL5110 to shutdown power
-    toggle(done_pin, 5, 0.5)
-
-    # Everything below this line will only execute
-    # when TPL5110 is not in use - e.g. while debugging
-    print("Starting debug loop.")
-    while True:
-        toggle(led_pin, 3, 0.05)
-        d = us100_read_distance(uart1)
-        t = us100_read_temperature(uart1)
-        print(f"{d} cm\t{t}°C")
-        print(bme.values)
-        time.sleep(0.5)
+        # Signal TPL5110 to shutdown power
+        while True:
+            led_pin.toggle()
+            done_pin.toggle()
+            time.sleep(0.5)
