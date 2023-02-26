@@ -1,3 +1,4 @@
+import machine
 from machine import UART, I2C, Pin, RTC
 import time
 import struct
@@ -9,6 +10,27 @@ from umqtt.simple import MQTTClient
 import bme280_float as bme280
 
 import env
+
+
+def read_vsys() -> float:
+    # source: https://forums.raspberrypi.com/viewtopic.php?t=339994#p2036717
+    _adc_max_value = 65535  # max value of 16bit unsinged
+    _adc_ref_voltage = 3.3  # 3.3V reference voltage
+    _vsys_divider = 3.0
+    conversion_factor = (_adc_ref_voltage / _adc_max_value) * _vsys_divider
+
+    def setPad(gpio, value):
+        machine.mem32[0x4001c000 | (4 + (4 * gpio))] = value
+
+    def getPad(gpio):
+        return machine.mem32[0x4001c000 | (4 + (4 * gpio))]
+
+    oldpad = getPad(29)
+    setPad(29, 128)  # no pulls, no output, no input
+    adc_Vsys = machine.ADC(3)
+    vsys = adc_Vsys.read_u16() * conversion_factor
+    setPad(29, oldpad)
+    return vsys
 
 
 def connect_to_network(nic: network.WLAN, ssid: str, password: str):
@@ -84,6 +106,7 @@ if __name__ == "__main__":
     led_pin = Pin("LED", mode=Pin.OUT, value=1)
     done_pin = Pin(15, mode=Pin.OUT, value=0)
     try:
+        battery_voltage = read_vsys()
 
         i2c = I2C(1, sda=Pin(6), scl=Pin(7))
         bme = bme280.BME280(i2c=i2c)
@@ -112,7 +135,8 @@ if __name__ == "__main__":
             'temperature': temperature,
             'humidity': humidity,
             'pressure': pressure,
-            'timestamp': timestamp
+            'timestamp': timestamp,
+            'batteryVoltage': battery_voltage
         }
         topic = f"{env.MQTT_BASE_TOPIC}/sensor_01"
         client.publish(topic, json.dumps(payload), retain=True)
