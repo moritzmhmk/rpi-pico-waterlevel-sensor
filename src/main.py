@@ -86,8 +86,9 @@ if __name__ == "__main__":
     try:
         uart1 = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9))
         i2c = I2C(1, sda=Pin(6), scl=Pin(7))
-        bme = bme280.BME280(i2c=i2c)
 
+        bme = bme280.BME280(i2c=i2c)
+        bme.read_compensated_data()  # discard first measurement
         temperature, pressure, humidity = bme.read_compensated_data()
 
         us100_read_distance(uart1)  # discard first measurement
