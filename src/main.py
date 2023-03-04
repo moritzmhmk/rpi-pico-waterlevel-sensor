@@ -104,7 +104,7 @@ def us100_read_temperature(uart: UART) -> int | None:
 
 if __name__ == "__main__":
     led_pin = Pin("LED", mode=Pin.OUT, value=1)
-    done_pin = Pin(15, mode=Pin.OUT, value=0)
+    done_pin = Pin(2, mode=Pin.OUT, value=0)
     try:
         battery_voltage = read_vsys()
 
