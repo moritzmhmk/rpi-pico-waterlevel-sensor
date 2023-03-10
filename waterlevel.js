@@ -84,6 +84,16 @@ module.exports = {
               : "false";
           },
         },
+        // enviroment sensor values
+        currentTemperature: {
+          decode: (message) => JSON.parse(message).temperature,
+        },
+        currentRelativeHumidity: {
+          decode: (message) => JSON.parse(message).humidity,
+        },
+        airPressure: {
+          decode: (message) => JSON.parse(message).pressure / 100,
+        },
       },
     };
   },
