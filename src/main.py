@@ -138,7 +138,7 @@ if __name__ == "__main__":
             'timestamp': timestamp,
             'batteryVoltage': battery_voltage
         }
-        topic = f"{env.MQTT_BASE_TOPIC}/sensor_01"
+        topic = f"{env.MQTT_STATE_TOPIC}"
         client.publish(topic, json.dumps(payload), retain=True)
         print(f"Published payload \"{payload}\" in topic \"{topic}\".")
         client.disconnect()
