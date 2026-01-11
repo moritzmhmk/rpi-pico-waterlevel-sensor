@@ -125,7 +125,11 @@ if __name__ == "__main__":
 
         # MQTT
         client = MQTTClient(env.MQTT_CLIENT_ID,
-                            env.MQTT_SERVER, keepalive=3600)
+                            env.MQTT_SERVER,
+                            user=env.MQTT_USER,
+                            password=env.MQTT_PASSWORD,
+                            keepalive=3600)
+        
         client.connect()
         print(
             f"Connected to mqtt on \"{env.MQTT_SERVER}\" as \"{env.MQTT_CLIENT_ID}\"."

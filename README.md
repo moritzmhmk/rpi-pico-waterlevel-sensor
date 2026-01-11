@@ -32,6 +32,13 @@ $ mpremote connect port:/dev/tty.usbmodem14101 mip install umqtt.simple
 $ mpremote connect port:/dev/tty.usbmodem14101 mip install github:robert-hh/BME280/bme280_float.py
 ```
 
+### Setup Home Assistant
+```bash
+$ mosquitto_pub -h homeassistant.local -u <USER> -P <PASSWORD> -t "homeassistant/device/waterlevel_01/config" -r -f homeassistant_config.json
+```
+To remove publish an empty message (calling with `-n` instead of `-f homeassistant_config.json`).
+
+
 ### Setup Homebridge
 
 Add accessory to `config.json` of homebridge:
