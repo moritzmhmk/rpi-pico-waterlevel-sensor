@@ -144,7 +144,7 @@ if __name__ == "__main__":
         client.disconnect()
         print("Disconnected from mqtt server.")
     except Exception as e:
-        print(f"Esception {e} occured.")
+        print(f"Exception {e} occured.")
         print(e)
     finally:
         # Blink LED
