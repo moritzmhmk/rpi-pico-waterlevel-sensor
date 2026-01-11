@@ -1,5 +1,9 @@
 # rpi-pico-waterlevel-sensor
 
+## Hardware
+
+![Breadboard setup](hardware/breadboard.png)
+
 ## Setup Development Environment
 
 Create venv:
