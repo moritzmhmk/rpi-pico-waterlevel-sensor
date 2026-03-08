@@ -1,13 +1,13 @@
-import machine
-from machine import UART, I2C, Pin, RTC
-import time
-import struct
-import network
-import socket
 import json
+import socket
+import struct
+import time
 
-from umqtt.simple import MQTTClient
 import bme280_float as bme280
+import machine
+import network
+from machine import I2C, RTC, UART, Pin
+from umqtt.simple import MQTTClient
 
 import env
 
@@ -20,10 +20,10 @@ def read_vsys() -> float:
     conversion_factor = (_adc_ref_voltage / _adc_max_value) * _vsys_divider
 
     def setPad(gpio, value):
-        machine.mem32[0x4001c000 | (4 + (4 * gpio))] = value
+        machine.mem32[0x4001C000 | (4 + (4 * gpio))] = value
 
     def getPad(gpio):
-        return machine.mem32[0x4001c000 | (4 + (4 * gpio))]
+        return machine.mem32[0x4001C000 | (4 + (4 * gpio))]
 
     oldpad = getPad(29)
     setPad(29, 128)  # no pulls, no output, no input
@@ -34,7 +34,7 @@ def read_vsys() -> float:
 
 
 def connect_to_network(nic: network.WLAN, ssid: str, password: str):
-    print(f"Connecting to network \"{ssid}\"...", end="")
+    print(f'Connecting to network "{ssid}"...', end="")
     nic.active(True)
     nic.connect(ssid, password)
     for _ in range(10):
@@ -53,7 +53,7 @@ def connect_to_network(nic: network.WLAN, ssid: str, password: str):
         if s == -3:
             print(" bad authentication!")
 
-        raise RuntimeError('Network connection failed.')
+        raise RuntimeError("Network connection failed.")
 
 
 def set_time_from_ntp(host: str = "pool.ntp.org"):
@@ -71,8 +71,7 @@ def set_time_from_ntp(host: str = "pool.ntp.org"):
     val = struct.unpack("!I", msg[40:44])[0]
     t = val - NTP_DELTA
     tm = time.gmtime(t)
-    RTC().datetime(
-        (tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+    RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
 
 
 def time_to_iso(t: time.struct_time):
@@ -124,27 +123,27 @@ if __name__ == "__main__":
         timestamp = time_to_iso(time.gmtime())
 
         # MQTT
-        client = MQTTClient(env.MQTT_CLIENT_ID,
-                            env.MQTT_SERVER,
-                            user=env.MQTT_USER,
-                            password=env.MQTT_PASSWORD,
-                            keepalive=3600)
-        
-        client.connect()
-        print(
-            f"Connected to mqtt on \"{env.MQTT_SERVER}\" as \"{env.MQTT_CLIENT_ID}\"."
+        client = MQTTClient(
+            env.MQTT_CLIENT_ID,
+            env.MQTT_SERVER,
+            user=env.MQTT_USER,
+            password=env.MQTT_PASSWORD,
+            keepalive=3600,
         )
+
+        client.connect()
+        print(f'Connected to mqtt on "{env.MQTT_SERVER}" as "{env.MQTT_CLIENT_ID}".')
         payload = {
-            'distance': distance,
-            'temperature': temperature,
-            'humidity': humidity,
-            'pressure': pressure,
-            'timestamp': timestamp,
-            'batteryVoltage': battery_voltage
+            "distance": distance,
+            "temperature": temperature,
+            "humidity": humidity,
+            "pressure": pressure,
+            "timestamp": timestamp,
+            "batteryVoltage": battery_voltage,
         }
         topic = f"{env.MQTT_STATE_TOPIC}"
         client.publish(topic, json.dumps(payload), retain=True)
-        print(f"Published payload \"{payload}\" in topic \"{topic}\".")
+        print(f'Published payload "{payload}" in topic "{topic}".')
         client.disconnect()
         print("Disconnected from mqtt server.")
     except Exception as e:
@@ -152,7 +151,7 @@ if __name__ == "__main__":
         print(e)
     finally:
         # Blink LED
-        for _ in range(5*2):
+        for _ in range(5 * 2):
             led_pin.toggle()
             time.sleep(0.1)
 
