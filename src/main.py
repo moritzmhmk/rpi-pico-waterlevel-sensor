@@ -113,8 +113,11 @@ if __name__ == "__main__":
         temperature, pressure, humidity = bme.read_compensated_data()
 
         uart1 = UART(1, baudrate=9600, tx=Pin(8), rx=Pin(9))
-        us100_read_distance(uart1)  # discard first measurement
-        distance = us100_read_distance(uart1)
+        distances = []
+        for _ in range(9):
+            distances.append(us100_read_distance(uart1))
+        distances.sort()
+        distance = distances[4]  # the median of 9 measurements
 
         wlan = network.WLAN(network.STA_IF)
         connect_to_network(wlan, env.WLAN_SSID, env.WLAN_PASSWORD)
